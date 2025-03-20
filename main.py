@@ -45,6 +45,13 @@ async def root():
     """Root endpoint to check if the server is running."""
     return {"status": "active", "message": "MCP Server is running"}
 
+VERSION = "1.0.1"
+
+@app.get("/version")
+async def version():
+    """Get the current version of the MCP server."""
+    return {"version": VERSION}
+
 @app.get("/health")
 async def health_check() -> Dict:
     """Health check endpoint for container and deployment monitoring."""
@@ -61,7 +68,8 @@ async def health_check() -> Dict:
             "token_configured": github_configured,
             "webhook_configured": webhook_configured
         },
-        "version": "1.0.0"
+        "version": VERSION,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
     
     # Set appropriate status code

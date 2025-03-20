@@ -10,8 +10,8 @@ def check_pr_status():
     try:
         repo = g.get_user().get_repo("mcp-server")
         
-        # Get PR #2 (GitHub Actions setup)
-        pr = repo.get_pull(2)
+        # Get PR #3 (Deployment setup)
+        pr = repo.get_pull(3)
         
         print("\nPull Request Status")
         print("==================")
