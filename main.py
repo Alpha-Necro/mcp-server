@@ -1,16 +1,23 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 import uvicorn
+import time
+import os
 from github_integration import (
     RepoInfo, IssueCreate, PullRequestCreate,
     create_issue, create_pull_request, list_issues,
     get_repo_info, github_config
 )
 
-app = FastAPI(title="MCP Server")
+app = FastAPI(
+    title="MCP Server",
+    description="Mission Control Protocol server for GitHub and Windsurf integration",
+    version="1.0.0"
+)
 
 # Configure CORS
 app.add_middleware(
@@ -20,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Track server start time for uptime monitoring
+START_TIME = time.time()
 
 class CommandRequest(BaseModel):
     command: str
@@ -32,7 +42,37 @@ class CommandResponse(BaseModel):
 
 @app.get("/")
 async def root():
+    """Root endpoint to check if the server is running."""
     return {"status": "active", "message": "MCP Server is running"}
+
+@app.get("/health")
+async def health_check() -> Dict:
+    """Health check endpoint for container and deployment monitoring."""
+    uptime = int(time.time() - START_TIME)
+    
+    # Check GitHub token
+    github_configured = bool(os.getenv("GITHUB_ACCESS_TOKEN"))
+    webhook_configured = bool(os.getenv("GITHUB_WEBHOOK_SECRET"))
+    
+    health_status = {
+        "status": "healthy",
+        "uptime_seconds": uptime,
+        "github_integration": {
+            "token_configured": github_configured,
+            "webhook_configured": webhook_configured
+        },
+        "version": "1.0.0"
+    }
+    
+    # Set appropriate status code
+    if not (github_configured and webhook_configured):
+        health_status["status"] = "degraded"
+        return JSONResponse(
+            content=health_status,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+    
+    return health_status
 
 @app.post("/command", response_model=CommandResponse)
 async def execute_command(request: CommandRequest):
